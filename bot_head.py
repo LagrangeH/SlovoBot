@@ -54,6 +54,9 @@ class SetUnicVariables:
         self.user_diction = {}
         self.user_timer = {'timer': '09:00', 'timer_status': True}
 
+    def get_timer(self):
+        return self.user_timer
+
     def add_to_dicton(self, word):
         pass
 

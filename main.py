@@ -34,7 +34,12 @@ def timer():
     logger.info('Timer Thread started')
     while True:
         try:
-            pass    # body of timer
+            for user in users.keys():
+                if users[user].get_timer()['timer_status'] is True:
+                    print(True)
+                else:
+                    print(False)
+            time.sleep(3)
         except:
             logger.error(traceback.format_exc())
 
