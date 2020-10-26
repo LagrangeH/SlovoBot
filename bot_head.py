@@ -51,10 +51,22 @@ class BotUtils:
 
 class SetUnicVariables:
     def __init__(self):
-        self.diction = {}
+        self.user_diction = {}
+        self.user_timer = {'timer': '09:00', 'timer_status': True}
 
     def add_to_dicton(self, word):
         pass
+
+    def change_timer(self):
+        pass
+
+    def off_timer(self):
+        self.user_timer['timer_status'] = False
+        return 'Timer for user disabled'
+
+    def on_timer(self):
+        self.user_timer['timer_status'] = True
+        return 'Timer for user enabled'
 
 
 class DataBase:
