@@ -6,6 +6,7 @@ from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.utils import get_random_id
 from loguru import logger
 import sqlite3
+from datetime import datetime
 
 # Авторизация ВК
 vk = vk_api.VkApi(token=TOKEN)
@@ -13,6 +14,7 @@ vk.get_api()
 longpoll = VkBotLongPoll(vk, 194597333)
 users = {}  # Словарь id всех пользователей со значением уникального класса
 logger.add("errors.log", format="{time} {level} {message}", level="ERROR", rotation="20 KB", compression="zip")
+clocks = {}
 
 
 class BotUtils:
@@ -52,7 +54,7 @@ class BotUtils:
 class SetUnicVariables:
     def __init__(self):
         self.user_diction = {}
-        self.user_timer = {'timer': '09:00', 'timer_status': True}
+        self.user_timer = {'timer': 9.0, 'timer_status': True}
 
     def get_timer(self):
         return self.user_timer
