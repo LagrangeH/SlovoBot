@@ -1,12 +1,17 @@
 # !/usr/bin/env python3
-from bot_head import BotUtils, SetUnicVariables, DataBase
-from bot_head import longpoll, users, clocks
-import traceback
-from vk_api.bot_longpoll import VkBotEventType
-from loguru import logger
 import threading
-from datetime import datetime
 import time
+import traceback
+
+from random import randrange
+from datetime import datetime
+from loguru import logger
+from vk_api.bot_longpoll import VkBotEventType
+from vk_api.utils import get_random_id
+
+from bot_head import BotUtils, SetUnicVariables, DataBase
+from bot_head import longpoll, users, clocks, used_words, vk
+from bot_head import word_count_without_bug
 
 
 @logger.catch()
@@ -23,8 +28,10 @@ def run():
                 kb = bot.create_keyboard()  # Клавиатура
                 # Словарь, где ключ - id юзера, значение - экземпляр класса
                 users[user_id] = SetUnicVariables() if users.get(user_id) is None else users[user_id]
-                if response == '123':
-                    bot.send_message('Нажми кнопку, чтобы начать', kb)
+                if response in ('начать', 'меню', 'привет'):
+                    bot.send_message('Bot info', kb)
+                elif response == '':
+                    pass
                 else:
                     bot.send_message('Я тебя не понимаю(', kb)
         except:
@@ -36,10 +43,18 @@ def timer():
     logger.info('Timer Thread started')
     while True:
         try:
+            logger.debug('Итерация таймера')
+            db = DataBase()
             for user in users.keys():  # Итерируем имеющиеся id юзеров
                 if users[user].get_timer()['timer_status'] is True:  # Проверяем тех юзеров, у которых включен таймер
                     # Создаем словарь, в котором ключём является время таймера, а значением - массив с id пользователей
-                    clocks[users[user].get_timer()['timer']] = user
+                    clocks[users[user].get_timer()['timer']] = []
+                    clocks[users[user].get_timer()['timer']].append(user)
+
+            # Если боту еще никто не писал
+            if clocks == {}:
+                time.sleep(3)
+                continue
 
             # Создаем массив разновидностей времен таймера
             cl = []
@@ -75,6 +90,26 @@ def timer():
                                           int(time_for_timer), int('{:.0f}'.format(time_for_timer % 1 * 100)))
 
             delta_time = (alarm_time - today).total_seconds() // 1
+
+            if (today.month+today.day/100) not in used_words:
+                word_data = db.data_by_id(randrange(0, stop=word_count_without_bug()))
+                word_id, word, word_interpretation, first_letter = word_data
+                used_words[today.month+today.day/100] = word_id
+            else:
+                word_data = db.data_by_id(used_words[today.month+today.day/100])
+                word_id, word, word_interpretation, first_letter = word_data
+                used_words[today.month+today.day/100] = word_id
+
+            message = word + '\n' + word_interpretation
+            time.sleep(2)
+            for user in clocks[time_for_timer]:
+                vk.method('messages.send',
+                          {'peer_id': user, 'user_id': user,
+                           'message': message, 'random_id': get_random_id(),
+                           'attachment': None, 'keyboard': None})
+            else:
+                logger.info('Рассылка отправлена')
+
             time.sleep(delta_time)  # Ждём таймер
         except:
             logger.error(traceback.format_exc())

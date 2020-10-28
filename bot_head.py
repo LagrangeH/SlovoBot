@@ -1,20 +1,36 @@
+import sqlite3
 import traceback
-from data import TOKEN
+
 import vk_api
+from loguru import logger
 from vk_api.bot_longpoll import VkBotLongPoll
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.utils import get_random_id
-from loguru import logger
-import sqlite3
-from datetime import datetime
+
+from data import TOKEN
 
 # Авторизация ВК
 vk = vk_api.VkApi(token=TOKEN)
 vk.get_api()
 longpoll = VkBotLongPoll(vk, 194597333)
 users = {}  # Словарь id всех пользователей со значением уникального класса
-logger.add("errors.log", format="{time} {level} {message}", level="ERROR", rotation="20 KB", compression="zip")
-clocks = {}
+logger.add("debug.log", format="{time} {level} {message}", level="DEBUG", rotation="100 KB", compression="zip")
+clocks = {}    # Создаем словарь, в котором ключём является время таймера, а значением - массив с id пользователей
+used_words = {}    # Словарь использованых слов в виде: data:id
+
+
+def word_count_without_bug():
+    conn = sqlite3.connect('dictionary.db')
+    cur = conn.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS words(
+                id INT,
+                word TEXT PRIMARY KEY,
+                interpretation TEXT,
+                first_letter TEXT);""")
+    conn.commit()
+    cur.execute("SELECT COUNT(id) FROM words;")
+    leng = int(cur.fetchone()[0])
+    return leng
 
 
 class BotUtils:
@@ -42,9 +58,8 @@ class BotUtils:
 
     def create_keyboard(self):
         kb = VkKeyboard(one_time=False)
-        if self.response is not None:
-            kb.add_button('1', color=VkKeyboardColor.SECONDARY)
-            kb.add_button('2', color=VkKeyboardColor.SECONDARY)
+        if self.response == 'начать':
+            kb.add_button('Кнопка', color=VkKeyboardColor.PRIMARY)
         else:
             kb.add_button('Начать', color=VkKeyboardColor.SECONDARY)
         kb = kb.get_keyboard()
@@ -105,15 +120,24 @@ class DataBase:
 
         # TODO: Сделать туть выше по-другому (без .format())
 
-    @_commit
+    # @_commit
     def data_by_word(self, word: str):
         self.cur.execute("SELECT * FROM words WHERE word='{}';".format(word))
         return self.cur.fetchone()
 
-    @_commit
+    # @_commit
     def data_by_id(self, id: int):
         self.cur.execute("SELECT * FROM words WHERE id='{}';".format(id))
         return self.cur.fetchone()
+
+    @_commit
+    def word_count(self):
+        self.cur.execute("SELECT COUNT(id) FROM words;")
+        leng = int(self.cur.fetchone()[0])
+        if leng is not None:
+            return leng
+        else:
+            raise Exception('Словарь пустой')
 
     @_commit
     def check_word(self, word: str):
