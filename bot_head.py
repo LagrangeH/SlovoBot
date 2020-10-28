@@ -11,7 +11,7 @@ from data import TOKEN
 
 # Авторизация ВК
 vk = vk_api.VkApi(token=TOKEN)
-vk.get_api()
+vk_session = vk.get_api()
 longpoll = VkBotLongPoll(vk, 194597333)
 users = {}  # Словарь id всех пользователей со значением уникального класса
 logger.add("debug.log", format="{time} {level} {message}", level="DEBUG", rotation="100 KB", compression="zip")
@@ -59,34 +59,11 @@ class BotUtils:
     def create_keyboard(self):
         kb = VkKeyboard(one_time=False)
         if self.response == 'начать':
-            kb.add_button('Кнопка', color=VkKeyboardColor.PRIMARY)
+            kb.add_button('Мой словарь', color=VkKeyboardColor.PRIMARY)
         else:
             kb.add_button('Начать', color=VkKeyboardColor.SECONDARY)
         kb = kb.get_keyboard()
         return kb
-
-
-class SetUnicVariables:
-    def __init__(self):
-        self.user_diction = {}
-        self.user_timer = {'timer': 9.0, 'timer_status': True}
-
-    def get_timer(self):
-        return self.user_timer
-
-    def add_to_dicton(self, word):
-        pass
-
-    def change_timer(self):
-        pass
-
-    def off_timer(self):
-        self.user_timer['timer_status'] = False
-        return 'Timer for user disabled'
-
-    def on_timer(self):
-        self.user_timer['timer_status'] = True
-        return 'Timer for user enabled'
 
 
 class DataBase:
@@ -146,3 +123,41 @@ class DataBase:
             return False
         else:
             return True
+
+
+class SetUnicVariables(DataBase):
+    def __init__(self):
+        super().__init__()  # Я не знаю, что это, но примерно представляю
+        self.user_diction = []
+        self.user_timer = {'timer': 9.0, 'timer_status': True}
+
+    def get_timer(self):
+        return self.user_timer
+
+    def change_timer(self):
+        pass
+
+    def off_timer(self):
+        self.user_timer['timer_status'] = False
+        return 'Timer for user disabled'
+
+    def on_timer(self):
+        self.user_timer['timer_status'] = True
+        return 'Timer for user enabled'
+
+    def add_to_diction(self, word):
+        if word not in self.user_diction:
+            self.user_diction.append(word)
+            return True
+        else:
+            return False
+
+    def del_from_diction(self, word):
+        try:
+            self.user_diction.remove(word)
+            return True
+        except ValueError:
+            return False
+
+    def clear_diction(self):
+        pass

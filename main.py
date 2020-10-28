@@ -2,15 +2,19 @@
 import threading
 import time
 import traceback
+import json
+
+import messages
 
 from random import randrange
 from datetime import datetime
 from loguru import logger
 from vk_api.bot_longpoll import VkBotEventType
+from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.utils import get_random_id
 
 from bot_head import BotUtils, SetUnicVariables, DataBase
-from bot_head import longpoll, users, clocks, used_words, vk
+from bot_head import longpoll, users, clocks, used_words, vk, vk_session
 from bot_head import word_count_without_bug
 
 
@@ -20,20 +24,44 @@ def run():
     for event in longpoll.listen():
         try:
             if event.type == VkBotEventType.MESSAGE_NEW and event.from_user:
-                response = event.obj.text.lower()
+                response = event.obj.text.lower()  # Ответ пользователя
                 peer_id = event.obj.peer_id
                 user_id = event.obj.from_id
-                db = DataBase()
+                db = DataBase()  # Подключение к базе данных
                 bot = BotUtils(event, response, user_id, peer_id)
                 kb = bot.create_keyboard()  # Клавиатура
                 # Словарь, где ключ - id юзера, значение - экземпляр класса
                 users[user_id] = SetUnicVariables() if users.get(user_id) is None else users[user_id]
+
                 if response in ('начать', 'меню', 'привет'):
-                    bot.send_message('Bot info', kb)
-                elif response == '':
+                    bot.send_message(messages.info, kb)
+                elif response == 'мой словарь':
                     pass
                 else:
-                    bot.send_message('Я тебя не понимаю(', kb)
+                    bot.send_message('Я тебя не понимаю😟', kb)
+            elif event.type == VkBotEventType.MESSAGE_EVENT:
+                if event.object.payload.get('type') == 'show_snackbar':
+                    payload = event.object.payload
+                    user_id = event.obj.user_id
+
+                    if 'добавлено' in payload['text']:  # Если добавить слово в словарь юзера
+                        word = payload['text'][7:-26]
+                        add_word = users[user_id].add_to_diction(word)
+                        if not add_word:
+                            payload['text'] = 'Это слово уже в твоём словаре'
+
+                    else:   # Если удалить слово из словаря юзера
+                        word = payload['text'][7:-27]
+                        del_word = users[user_id].del_from_diction(word)
+                        if not del_word:
+                            payload['text'] = 'Этого слова не было в твоём словаре'
+
+                    vk_session.messages.sendMessageEventAnswer(
+                        event_id=event.object.event_id,
+                        user_id=event.object.user_id,
+                        peer_id=event.object.peer_id,
+                        event_data=json.dumps(payload))
+
         except:
             logger.error(traceback.format_exc())
 
@@ -43,7 +71,6 @@ def timer():
     logger.info('Timer Thread started')
     while True:
         try:
-            logger.debug('Итерация таймера')
             db = DataBase()
             for user in users.keys():  # Итерируем имеющиеся id юзеров
                 if users[user].get_timer()['timer_status'] is True:  # Проверяем тех юзеров, у которых включен таймер
@@ -91,26 +118,38 @@ def timer():
 
             delta_time = (alarm_time - today).total_seconds() // 1
 
-            if (today.month+today.day/100) not in used_words:
+            if (today.month + today.day / 100) not in used_words:
                 word_data = db.data_by_id(randrange(0, stop=word_count_without_bug()))
                 word_id, word, word_interpretation, first_letter = word_data
-                used_words[today.month+today.day/100] = word_id
+                used_words[today.month + today.day / 100] = word_id
             else:
-                word_data = db.data_by_id(used_words[today.month+today.day/100])
+                word_data = db.data_by_id(used_words[today.month + today.day / 100])
                 word_id, word, word_interpretation, first_letter = word_data
-                used_words[today.month+today.day/100] = word_id
+                used_words[today.month + today.day / 100] = word_id
 
-            message = word + '\n' + word_interpretation
-            time.sleep(2)
+            message = word.upper() + ' - это\n' + word_interpretation
+
+            def keyboard():
+                kb = VkKeyboard(inline=True)
+                kb.add_callback_button(label='Добавить', color=VkKeyboardColor.POSITIVE,
+                                       payload={"type": "show_snackbar",
+                                                "text": f"Слово «{word.lower()}» добавлено в твой словарь"})
+                kb.add_callback_button(label='Удалить', color=VkKeyboardColor.NEGATIVE,
+                                       payload={"type": "show_snackbar",
+                                                "text": f"Слово «{word.lower()}» удалено из твоего словаря"})
+                return kb.get_keyboard()
+
+            # time.sleep(delta_time)  # Ждём таймер TODO: поставить после дебага здесь
+
             for user in clocks[time_for_timer]:
                 vk.method('messages.send',
                           {'peer_id': user, 'user_id': user,
                            'message': message, 'random_id': get_random_id(),
-                           'attachment': None, 'keyboard': None})
+                           'attachment': None, 'keyboard': keyboard()})
             else:
                 logger.info('Рассылка отправлена')
 
-            time.sleep(delta_time)  # Ждём таймер
+            time.sleep(delta_time)  # Ждём таймер TODO: убрать после дебага
         except:
             logger.error(traceback.format_exc())
 
