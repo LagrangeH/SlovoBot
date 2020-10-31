@@ -1,3 +1,5 @@
+# !/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import sqlite3
 import traceback
 
@@ -15,8 +17,8 @@ vk_session = vk.get_api()
 longpoll = VkBotLongPoll(vk, 194597333)
 users = {}  # Словарь id всех пользователей со значением уникального класса
 logger.add("debug.log", format="{time} {level} {message}", level="DEBUG", rotation="100 KB", compression="zip")
-clocks = {}    # Создаем словарь, в котором ключём является время таймера, а значением - массив с id пользователей
-used_words = {}    # Словарь использованых слов в виде: data:id
+clocks = {}  # Создаем словарь, в котором ключём является время таймера, а значением - массив с id пользователей
+used_words = {}  # Словарь использованых слов в виде: data:id
 
 
 def word_count_without_bug():
@@ -33,37 +35,15 @@ def word_count_without_bug():
     return leng
 
 
-class BotUtils:
-    def __init__(self, event, response, user_id, peer_id):
-        self.event = event
-        self.response = response
-        self.user_id = user_id
-        self.peer_id = peer_id
-
-    def edit_message(self, message, message_id):
-        return vk.method('messages.edit',
-                         {'peer_id': self.peer_id,
-                          'message': message,
-                          'message_id': message_id})
-
-    def send_message(self, message, kb, attachment=None):
-        return vk.method('messages.send',
-                         {'peer_id': self.peer_id, 'user_id': self.user_id,
-                          'message': message, 'random_id': get_random_id(),
-                          'attachment': attachment, 'keyboard': kb})
-
-    def create_inline_kb(self):
-        pass
-        # kb = VkKeyboard(inline=True)
-
-    def create_keyboard(self):
-        kb = VkKeyboard(one_time=False)
-        if self.response == 'начать':
-            kb.add_button('Мой словарь', color=VkKeyboardColor.PRIMARY)
-        else:
-            kb.add_button('Начать', color=VkKeyboardColor.SECONDARY)
-        kb = kb.get_keyboard()
-        return kb
+def keyboard_for_word(word):
+    kb = VkKeyboard(inline=True)
+    kb.add_callback_button(label='Добавить', color=VkKeyboardColor.POSITIVE,
+                           payload={"type": "show_snackbar",
+                                    "text": f"Слово «{word.lower()}» добавлено в твой словарь"})
+    kb.add_callback_button(label='Удалить', color=VkKeyboardColor.NEGATIVE,
+                           payload={"type": "show_snackbar",
+                                    "text": f"Слово «{word.lower()}» удалено из твоего словаря"})
+    return kb.get_keyboard()
 
 
 class DataBase:
@@ -77,37 +57,9 @@ class DataBase:
             first_letter TEXT);""")
         self.conn.commit()
 
-    def _commit(function):
-        def f(self):
-            function(self)
-            self.conn.commit()
-        return f
+    def __del__(self):
+        self.conn.close()
 
-    @_commit
-    def add(self, word: str, interpretation: str):
-        self.cur.execute("SELECT id FROM words")
-        leng = len(self.cur.fetchall())
-        self.conn.commit()
-        try:
-            self.cur.execute("INSERT INTO words(id, word, interpretation, first_letter)"
-                             "VALUES({}, '{}', '{}', '{}');".format(leng, word, interpretation, word[0]))
-            return "Success"
-        except:
-            logger.error(traceback.format_exc())
-
-        # TODO: Сделать туть выше по-другому (без .format())
-
-    # @_commit
-    def data_by_word(self, word: str):
-        self.cur.execute("SELECT * FROM words WHERE word='{}';".format(word))
-        return self.cur.fetchone()
-
-    # @_commit
-    def data_by_id(self, id: int):
-        self.cur.execute("SELECT * FROM words WHERE id='{}';".format(id))
-        return self.cur.fetchone()
-
-    @_commit
     def word_count(self):
         self.cur.execute("SELECT COUNT(id) FROM words;")
         leng = int(self.cur.fetchone()[0])
@@ -116,18 +68,39 @@ class DataBase:
         else:
             raise Exception('Словарь пустой')
 
-    @_commit
+    def add(self, word: str, interpretation: str):
+        self.cur.execute("SELECT COUNT(id) FROM words;")
+        leng = int(self.cur.fetchone()[0])
+        try:
+            self.cur.execute("INSERT INTO words VALUES(?, ?, ?, ?);", (leng, word, interpretation, word[0]))
+            self.conn.commit()
+            return "Success"
+        except:
+            logger.error(traceback.format_exc())
+
+    def data_by_word(self, word: str):
+        self.cur.execute("SELECT * FROM words WHERE word='{}';".format(word.capitalize()))
+        return self.cur.fetchone()
+
+    def data_by_id(self, id: int):
+        self.cur.execute("SELECT * FROM words WHERE id='{}';".format(id))
+        return self.cur.fetchone()
+
     def check_word(self, word: str):
-        self.cur.execute("SELECT word FROM words WHERE word='{}';".format(word))
-        if self.cur.fetchone() is None:
+        self.cur.execute("SELECT * FROM words WHERE word='{}';".format('Абдоминопластика'))
+        # self.cur.execute("SELECT * FROM words WHERE word='{}';".format(word.capitalize()))
+        fetch = self.cur.fetchall()
+        logger.debug(fetch)
+        if not fetch:
+            logger.debug(False)
             return False
         else:
+            logger.debug(True)
             return True
 
 
-class SetUnicVariables(DataBase):
+class SetUnicVariables:
     def __init__(self):
-        super().__init__()  # Я не знаю, что это, но примерно представляю
         self.user_diction = []
         self.user_timer = {'timer': 9.0, 'timer_status': True}
 
@@ -160,4 +133,42 @@ class SetUnicVariables(DataBase):
             return False
 
     def clear_diction(self):
-        pass
+        self.user_diction.clear()
+        return True
+
+
+class BotUtils:
+    def __init__(self, event, response, user_id, peer_id, users):
+        super().__init__()
+        self.event = event
+        self.response = response
+        self.user_id = user_id
+        self.peer_id = peer_id
+        self.users = users
+        self.users[self.user_id] = SetUnicVariables() if users.get(self.user_id) is None else users[self.user_id]
+
+    def edit_message(self, message, message_id):
+        return vk.method('messages.edit',
+                         {'peer_id': self.peer_id,
+                          'message': message,
+                          'message_id': message_id})
+
+    def send_message(self, message, kb, attachment=None):
+        return vk.method('messages.send',
+                         {'peer_id': self.peer_id, 'user_id': self.user_id,
+                          'message': message, 'random_id': get_random_id(),
+                          'attachment': attachment, 'keyboard': kb})
+
+    def create_inline_kb(self):
+        kb = VkKeyboard(inline=True)
+
+        return kb.get_keyboard()
+
+    def create_keyboard(self):
+        kb = VkKeyboard(one_time=False)
+        if self.response == '123':
+            kb.add_button('Меню', color=VkKeyboardColor.PRIMARY)
+        else:
+            kb.add_button('Мой словарь', color=VkKeyboardColor.PRIMARY)
+            kb.add_button('Инфо', color=VkKeyboardColor.SECONDARY)
+        return kb.get_keyboard()
