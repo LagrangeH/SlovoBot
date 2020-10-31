@@ -13,7 +13,7 @@ from loguru import logger
 from vk_api.bot_longpoll import VkBotEventType
 from vk_api.utils import get_random_id
 
-from bot_head import BotUtils, SetUnicVariables, DataBase
+from bot_head import BotUtils, SetUniqueVariables, DataBase
 from bot_head import long_poll, users, clocks, used_words, vk, vk_session, keyboard_for_word
 from bot_head import word_count_without_bug
 
@@ -31,7 +31,7 @@ def run():
                 bot = BotUtils(event, response, user_id, peer_id, users)
                 kb = bot.create_keyboard()
                 # Словарь, где ключ - id юзера, значение - экземпляр класса
-                users[user_id] = SetUnicVariables() if users.get(user_id) is None else users[user_id]
+                users[user_id] = SetUniqueVariables() if users.get(user_id) is None else users[user_id]
 
                 if response in ('начать', 'меню', 'привет', 'инфо'):
                     bot.send_message(messages.info, kb)
@@ -51,7 +51,7 @@ def run():
                         bot.send_message(msg, keyboard_for_word(word_data[1]))
                     else:
                         bot.send_message('Этого слова нет в моём словаре', kb)
-                elif response[0] == '#':
+                elif response[0] == '#':    # Отправить "карточку" слова из словаря юзера по номеру в нём
                     try:
                         word = users[user_id].user_diction[int(response[1:])-1].capitalize()
                         word += ' - это\n' + db.data_by_word(word)[2]

@@ -97,7 +97,7 @@ class DataBase:
             return True
 
 
-class SetUnicVariables:
+class SetUniqueVariables:
     def __init__(self):
         self.user_diction = []
         self.user_timer = {'timer': 9.0, 'timer_status': True}
@@ -143,7 +143,7 @@ class BotUtils:
         self.user_id = user_id
         self.peer_id = peer_id
         self.users = users_
-        self.users[self.user_id] = SetUnicVariables() if users_.get(self.user_id) is None else users_[self.user_id]
+        self.users[self.user_id] = SetUniqueVariables() if users_.get(self.user_id) is None else users_[self.user_id]
 
     def edit_message(self, message, message_id):
         return vk.method('messages.edit',
