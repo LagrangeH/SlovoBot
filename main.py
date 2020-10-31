@@ -14,25 +14,25 @@ from vk_api.bot_longpoll import VkBotEventType
 from vk_api.utils import get_random_id
 
 from bot_head import BotUtils, SetUnicVariables, DataBase
-from bot_head import longpoll, users, clocks, used_words, vk, vk_session, keyboard_for_word
+from bot_head import long_poll, users, clocks, used_words, vk, vk_session, keyboard_for_word
 from bot_head import word_count_without_bug
 
 
 @logger.catch()
 def run():
     logger.info('LongPoll Thread started')
-    for event in longpoll.listen():
+    for event in long_poll.listen():
         try:
             if event.type == VkBotEventType.MESSAGE_NEW and event.from_user:
-                response = event.obj.text.lower() if len(event.obj.text) > 0 else ' '   # Ответ пользователя
-                peer_id = event.obj.peer_id
-                user_id = event.obj.from_id
+
                 db = DataBase()  # Подключение к базе данных
+                response = event.obj.text.lower() if len(event.obj.text) > 0 else ' '   # Ответ пользователя
+                peer_id, user_id = event.obj.peer_id, event.obj.from_id
                 bot = BotUtils(event, response, user_id, peer_id, users)
-                kb = bot.create_keyboard()  # Клавиатура
-                kb_inline = bot.create_inline_kb()
+                kb = bot.create_keyboard()
                 # Словарь, где ключ - id юзера, значение - экземпляр класса
                 users[user_id] = SetUnicVariables() if users.get(user_id) is None else users[user_id]
+
                 if response in ('начать', 'меню', 'привет', 'инфо'):
                     bot.send_message(messages.info, kb)
                 elif response == 'мой словарь':
@@ -44,14 +44,13 @@ def run():
                             msg += f'{i+1}. {users[user_id].user_diction[i]}\n'
                         bot.send_message(msg, kb)
                 elif response[:5] == 'найти':
-                    word = response[5:]
+                    word = response[6:]
                     if db.check_word(word):
                         word_data = db.data_by_word(word)
                         msg = word_data[1].upper() + ' - это\n' + word_data[2]
                         bot.send_message(msg, keyboard_for_word(word_data[1]))
                     else:
                         bot.send_message('Этого слова нет в моём словаре', kb)
-                    # TODO
                 elif response[0] == '#':
                     try:
                         word = users[user_id].user_diction[int(response[1:])-1].capitalize()

@@ -14,7 +14,8 @@ from data import TOKEN
 # Авторизация ВК
 vk = vk_api.VkApi(token=TOKEN)
 vk_session = vk.get_api()
-longpoll = VkBotLongPoll(vk, 194597333)
+
+long_poll = VkBotLongPoll(vk, 194597333)
 users = {}  # Словарь id всех пользователей со значением уникального класса
 logger.add("debug.log", format="{time} {level} {message}", level="DEBUG", rotation="100 KB", compression="zip")
 clocks = {}  # Создаем словарь, в котором ключём является время таймера, а значением - массив с id пользователей
@@ -57,8 +58,9 @@ class DataBase:
             first_letter TEXT);""")
         self.conn.commit()
 
-    def __del__(self):
-        self.conn.close()
+    # def __del__(self):
+    #     # logger.info('Соединение с БД разорвано')
+    #     self.conn.close()
 
     def word_count(self):
         self.cur.execute("SELECT COUNT(id) FROM words;")
@@ -78,24 +80,20 @@ class DataBase:
         except:
             logger.error(traceback.format_exc())
 
-    def data_by_word(self, word: str):
+    def data_by_word(self, word):
         self.cur.execute("SELECT * FROM words WHERE word='{}';".format(word.capitalize()))
         return self.cur.fetchone()
 
-    def data_by_id(self, id: int):
-        self.cur.execute("SELECT * FROM words WHERE id='{}';".format(id))
+    def data_by_id(self, id_):
+        self.cur.execute("SELECT * FROM words WHERE id='{}';".format(id_))
         return self.cur.fetchone()
 
-    def check_word(self, word: str):
-        self.cur.execute("SELECT * FROM words WHERE word='{}';".format('Абдоминопластика'))
-        # self.cur.execute("SELECT * FROM words WHERE word='{}';".format(word.capitalize()))
+    def check_word(self, word):
+        self.cur.execute("SELECT * FROM words WHERE word='{}';".format(word.capitalize()))
         fetch = self.cur.fetchall()
-        logger.debug(fetch)
         if not fetch:
-            logger.debug(False)
             return False
         else:
-            logger.debug(True)
             return True
 
 
@@ -138,14 +136,14 @@ class SetUnicVariables:
 
 
 class BotUtils:
-    def __init__(self, event, response, user_id, peer_id, users):
+    def __init__(self, event, response, user_id, peer_id, users_):
         super().__init__()
         self.event = event
         self.response = response
         self.user_id = user_id
         self.peer_id = peer_id
-        self.users = users
-        self.users[self.user_id] = SetUnicVariables() if users.get(self.user_id) is None else users[self.user_id]
+        self.users = users_
+        self.users[self.user_id] = SetUnicVariables() if users_.get(self.user_id) is None else users_[self.user_id]
 
     def edit_message(self, message, message_id):
         return vk.method('messages.edit',
