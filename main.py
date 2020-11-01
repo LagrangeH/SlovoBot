@@ -27,10 +27,11 @@ def run():
 
                 db = DataBase()  # Подключение к базе данных
                 response = event.obj.text.lower() if len(event.obj.text) > 0 else ' '   # Ответ пользователя
-                payload = event.obj.payload
+                payload = event.obj.payload     # По какой-то причине словарь превращается в строку
                 peer_id, user_id = event.obj.peer_id, event.obj.from_id
                 bot = BotUtils(event, response, user_id, peer_id, users)
                 kb = bot.create_keyboard()
+                inline_kb = bot.create_inline_kb(payload)
                 # Словарь, где ключ - id юзера, значение - экземпляр класса
                 users[user_id] = SetUniqueVariables() if users.get(user_id) is None else users[user_id]
 
@@ -53,10 +54,13 @@ def run():
                         except ValueError:
                             bot.send_message('Нужно ввести число!', kb)
 
-                elif payload[0] == 'menu':
-                    # bot.edit_message()
-                    pass
-                elif payload[0] == 'user_dict':
+                elif 'info' in payload:
+                    bot.send_message(messages.info, kb)
+                elif 'menu' in payload:
+                    bot.send_message('Меню', kb)
+                elif 'settings' in payload:
+                    bot.send_message('Настройки', kb)
+                elif "user_dict" in payload:
                     if not users[user_id].user_diction:
                         bot.send_message('Ты не добавил понравившихся слов', kb)
                     else:
@@ -64,6 +68,11 @@ def run():
                         for i in range(len(users[user_id].user_diction)):
                             msg += f'{i+1}. {users[user_id].user_diction[i]}\n'
                         bot.send_message(msg, kb)
+                elif 'clear_diction' in payload:
+                    bot.send_message('Твой словарь будет полностью очищен. Ты подтверждаешь?', inline_kb)
+                elif 'cleared' in payload:
+                    users[user_id].clear_diction()
+                    bot.send_message('Твой словарь очищен', kb)
 
                 else:
                     if "not_supported_button" in payload:
@@ -174,7 +183,7 @@ def timer():
 
             message = word.upper() + ' - это\n' + word_interpretation
 
-            # time.sleep(delta_time)  # Ждём таймер TODO: поставить после дебага здесь
+            time.sleep(delta_time)  # Ждём таймер TODO: поставить после дебага здесь
 
             for user in clocks[time_for_timer]:
                 vk.method('messages.send',
@@ -184,7 +193,7 @@ def timer():
             else:
                 logger.info('Рассылка отправлена')
 
-            time.sleep(delta_time)  # Ждём таймер TODO: убрать после дебага
+            # time.sleep(delta_time)  # Ждём таймер TODO: убрать после дебага
         except:
             logger.error(traceback.format_exc())
 

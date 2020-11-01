@@ -158,16 +158,19 @@ class BotUtils:
                           'message': message, 'random_id': get_random_id(),
                           'attachment': attachment, 'keyboard': kb})
 
-    # def create_inline_kb(self):
-    #     kb = VkKeyboard(inline=True)
-    #
-    #     return kb.get_keyboard()
+    def create_inline_kb(self, payload):
+        kb = VkKeyboard(inline=True)
+        if 'clear_diction' in payload:
+            kb.add_button('Подтверждаю', color=VkKeyboardColor.POSITIVE, payload=['cleared'])
+        return kb.get_keyboard()
 
-    def create_keyboard(self):
+    def create_keyboard(self, *args):
         kb = VkKeyboard(one_time=False)
-        if self.response == 'найстройки':
+        if self.response == 'настройки':
             kb.add_button('Инфо', color=VkKeyboardColor.PRIMARY, payload=['info'])
-            kb.add_button('Меню', color=VkKeyboardColor.SECONDARY, payload=['menu', ])
+            kb.add_button('Очистить мой словарь', color=VkKeyboardColor.NEGATIVE, payload=['clear_diction'])
+            kb.add_line()
+            kb.add_button('Меню', color=VkKeyboardColor.SECONDARY, payload=['menu', args])
             # TODO сделать так, чтобы кнопка "Меню" редактировала сообщение, заменяя только клавиатуру в нём
         else:
             kb.add_button('Мой словарь', color=VkKeyboardColor.PRIMARY, payload=['user_dict'])
