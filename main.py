@@ -27,15 +27,36 @@ def run():
 
                 db = DataBase()  # Подключение к базе данных
                 response = event.obj.text.lower() if len(event.obj.text) > 0 else ' '   # Ответ пользователя
+                payload = event.obj.payload
                 peer_id, user_id = event.obj.peer_id, event.obj.from_id
                 bot = BotUtils(event, response, user_id, peer_id, users)
                 kb = bot.create_keyboard()
                 # Словарь, где ключ - id юзера, значение - экземпляр класса
                 users[user_id] = SetUniqueVariables() if users.get(user_id) is None else users[user_id]
 
-                if response in ('начать', 'меню', 'привет', 'инфо'):
-                    bot.send_message(messages.info, kb)
-                elif response == 'мой словарь':
+                if not payload:
+                    if response[:5] == 'найти':
+                        word = response[6:]
+                        if db.check_word(word):
+                            word_data = db.data_by_word(word)
+                            msg = word_data[1].upper() + ' - это\n' + word_data[2]
+                            bot.send_message(msg, keyboard_for_word(word_data[1]))
+                        else:
+                            bot.send_message('Этого слова нет в моём словаре', kb)
+                    elif response[0] == '#':  # Отправить "карточку" слова из словаря юзера по номеру в нём
+                        try:
+                            word = users[user_id].user_diction[int(response[1:]) - 1].capitalize()
+                            word += ' - это\n' + db.data_by_word(word)[2]
+                            bot.send_message(word, kb)
+                        except IndexError:
+                            bot.send_message('Это число превышает количество слов в твоем словаре!', kb)
+                        except ValueError:
+                            bot.send_message('Нужно ввести число!', kb)
+
+                elif payload[0] == 'menu':
+                    # bot.edit_message()
+                    pass
+                elif payload[0] == 'user_dict':
                     if not users[user_id].user_diction:
                         bot.send_message('Ты не добавил понравившихся слов', kb)
                     else:
@@ -43,25 +64,25 @@ def run():
                         for i in range(len(users[user_id].user_diction)):
                             msg += f'{i+1}. {users[user_id].user_diction[i]}\n'
                         bot.send_message(msg, kb)
-                elif response[:5] == 'найти':
-                    word = response[6:]
-                    if db.check_word(word):
-                        word_data = db.data_by_word(word)
-                        msg = word_data[1].upper() + ' - это\n' + word_data[2]
-                        bot.send_message(msg, keyboard_for_word(word_data[1]))
-                    else:
-                        bot.send_message('Этого слова нет в моём словаре', kb)
-                elif response[0] == '#':    # Отправить "карточку" слова из словаря юзера по номеру в нём
-                    try:
-                        word = users[user_id].user_diction[int(response[1:])-1].capitalize()
-                        word += ' - это\n' + db.data_by_word(word)[2]
-                        bot.send_message(word, kb)
-                    except IndexError:
-                        bot.send_message('Это число превышает количество слов в твоем словаре!', kb)
-                    except ValueError:
-                        bot.send_message('Нужно ввести число!', kb)
+
                 else:
-                    bot.send_message('Я тебя не понимаю😟', kb)
+                    if "not_supported_button" in payload:
+                        if "добавлено" in payload:
+                            word = payload[116:-31]
+                            add_word = users[user_id].add_to_diction(word)
+                            if not add_word:
+                                bot.send_message('Это слово уже в твоём словаре', kb)
+                            else:
+                                bot.send_message(f"Слово «{word.lower()}» добавлено в твой словарь", kb)
+                        elif "удалено" in payload:
+                            word = payload[116:-32]
+                            del_word = users[user_id].del_from_diction(word)
+                            if not del_word:
+                                bot.send_message('Этого слова не было в твоём словаре', kb)
+                            else:
+                                bot.send_message(f"Слово «{word.lower()}» удалено из твоего словаря", kb)
+                    else:
+                        bot.send_message('Я тебя не понимаю😟', kb)
 
             elif event.type == VkBotEventType.MESSAGE_EVENT:
                 if event.object.payload.get('type') == 'show_snackbar':

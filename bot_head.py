@@ -122,6 +122,7 @@ class SetUniqueVariables:
             return True
         else:
             return False
+        # TODO do raise, not return
 
     def del_from_diction(self, word):
         try:
@@ -129,6 +130,7 @@ class SetUniqueVariables:
             return True
         except ValueError:
             return False
+        # TODO do raise, not return
 
     def clear_diction(self):
         self.user_diction.clear()
@@ -137,7 +139,6 @@ class SetUniqueVariables:
 
 class BotUtils:
     def __init__(self, event, response, user_id, peer_id, users_):
-        super().__init__()
         self.event = event
         self.response = response
         self.user_id = user_id
@@ -157,16 +158,18 @@ class BotUtils:
                           'message': message, 'random_id': get_random_id(),
                           'attachment': attachment, 'keyboard': kb})
 
-    def create_inline_kb(self):
-        kb = VkKeyboard(inline=True)
-
-        return kb.get_keyboard()
+    # def create_inline_kb(self):
+    #     kb = VkKeyboard(inline=True)
+    #
+    #     return kb.get_keyboard()
 
     def create_keyboard(self):
         kb = VkKeyboard(one_time=False)
-        if self.response == '123':
-            kb.add_button('Меню', color=VkKeyboardColor.PRIMARY)
+        if self.response == 'найстройки':
+            kb.add_button('Инфо', color=VkKeyboardColor.PRIMARY, payload=['info'])
+            kb.add_button('Меню', color=VkKeyboardColor.SECONDARY, payload=['menu', ])
+            # TODO сделать так, чтобы кнопка "Меню" редактировала сообщение, заменяя только клавиатуру в нём
         else:
-            kb.add_button('Мой словарь', color=VkKeyboardColor.PRIMARY)
-            kb.add_button('Инфо', color=VkKeyboardColor.SECONDARY)
+            kb.add_button('Мой словарь', color=VkKeyboardColor.PRIMARY, payload=['user_dict'])
+            kb.add_button('Настройки', color=VkKeyboardColor.SECONDARY, payload=['settings'])
         return kb.get_keyboard()
