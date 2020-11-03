@@ -78,15 +78,17 @@ def run():
                     if "not_supported_button" in payload:
                         if "добавлено" in payload:
                             word = payload[116:-31]
-                            add_word = users[user_id].add_to_diction(word)
-                            if not add_word:
+                            try:
+                                add_word = users[user_id].add_to_diction(word)
+                            except RuntimeError:
                                 bot.send_message('Это слово уже в твоём словаре', kb)
                             else:
                                 bot.send_message(f"Слово «{word.lower()}» добавлено в твой словарь", kb)
                         elif "удалено" in payload:
                             word = payload[116:-32]
-                            del_word = users[user_id].del_from_diction(word)
-                            if not del_word:
+                            try:
+                                del_word = users[user_id].del_from_diction(word)
+                            except RuntimeError:
                                 bot.send_message('Этого слова не было в твоём словаре', kb)
                             else:
                                 bot.send_message(f"Слово «{word.lower()}» удалено из твоего словаря", kb)
@@ -100,14 +102,16 @@ def run():
 
                     if 'добавлено' in payload['text']:  # Если добавить слово в словарь юзера
                         word = payload['text'][7:-26]
-                        add_word = users[user_id].add_to_diction(word)
-                        if not add_word:
+                        try:
+                            add_word = users[user_id].add_to_diction(word)
+                        except RuntimeError:
                             payload['text'] = 'Это слово уже в твоём словаре'
 
-                    else:  # Если удалить слово из словаря юзера
+                    elif 'удалено' in payload['text']:  # Если удалить слово из словаря юзера
                         word = payload['text'][7:-27]
-                        del_word = users[user_id].del_from_diction(word)
-                        if not del_word:
+                        try:
+                            del_word = users[user_id].del_from_diction(word)
+                        except RuntimeError:
                             payload['text'] = 'Этого слова не было в твоём словаре'
 
                     vk_session.messages.sendMessageEventAnswer(

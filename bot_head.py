@@ -119,18 +119,14 @@ class SetUniqueVariables:
     def add_to_diction(self, word):
         if word not in self.user_diction:
             self.user_diction.append(word)
-            return True
         else:
-            return False
-        # TODO do raise, not return
+            raise RuntimeError
 
     def del_from_diction(self, word):
         try:
             self.user_diction.remove(word)
-            return True
         except ValueError:
-            return False
-        # TODO do raise, not return
+            raise RuntimeError
 
     def clear_diction(self):
         self.user_diction.clear()
@@ -171,7 +167,6 @@ class BotUtils:
             kb.add_button('Очистить мой словарь', color=VkKeyboardColor.NEGATIVE, payload=['clear_diction'])
             kb.add_line()
             kb.add_button('Меню', color=VkKeyboardColor.SECONDARY, payload=['menu', args])
-            # TODO сделать так, чтобы кнопка "Меню" редактировала сообщение, заменяя только клавиатуру в нём
         else:
             kb.add_button('Мой словарь', color=VkKeyboardColor.PRIMARY, payload=['user_dict'])
             kb.add_button('Настройки', color=VkKeyboardColor.SECONDARY, payload=['settings'])
