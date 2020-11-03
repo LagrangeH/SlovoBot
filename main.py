@@ -26,8 +26,8 @@ def run():
             if event.type == VkBotEventType.MESSAGE_NEW and event.from_user:
 
                 db = DataBase()  # Подключение к базе данных
-                response = event.obj.text.lower() if len(event.obj.text) > 0 else ' '   # Ответ пользователя
-                payload = event.obj.payload     # По какой-то причине словарь превращается в строку
+                response = event.obj.text.lower() if len(event.obj.text) > 0 else ' '  # Ответ пользователя
+                payload = event.obj.payload  # По какой-то причине словарь превращается в строку
                 peer_id, user_id = event.obj.peer_id, event.obj.from_id
                 bot = BotUtils(event, response, user_id, peer_id, users)
                 kb = bot.create_keyboard()
@@ -66,13 +66,17 @@ def run():
                     else:
                         msg = 'Понравившиеся слова:\n'
                         for i in range(len(users[user_id].user_diction)):
-                            msg += f'{i+1}. {users[user_id].user_diction[i]}\n'
+                            msg += f'{i + 1}. {users[user_id].user_diction[i]}\n'
                         bot.send_message(msg, kb)
                 elif 'clear_diction' in payload:
                     bot.send_message('Твой словарь будет полностью очищен. Ты подтверждаешь?', inline_kb)
                 elif 'cleared' in payload:
                     users[user_id].clear_diction()
                     bot.send_message('Твой словарь очищен', kb)
+                elif 'change_timer' in payload:
+                    bot.send_message("Сейчас твоё время ежедневных напоминаний установлено на "
+                                     f"{users[user_id].user_timer['timer']}, "
+                                     "нажми на нужную кнопку, чтобы изменить его:", inline_kb)
 
                 else:
                     if "not_supported_button" in payload:
