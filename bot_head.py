@@ -156,16 +156,18 @@ class BotUtils:
 
     def create_inline_kb(self, payload):
         kb = VkKeyboard(inline=True)
-        if 'clear_diction' in payload:
-            kb.add_button('Подтверждаю', color=VkKeyboardColor.POSITIVE, payload=['cleared'])
+        if payload is not None:
+            if 'clear_diction' in payload:
+                kb.add_button('Подтверждаю', color=VkKeyboardColor.POSITIVE, payload=['cleared'])
         return kb.get_keyboard()
 
     def create_keyboard(self, *args):
         kb = VkKeyboard(one_time=False)
-        if self.response == 'настройки':
+        if self.response in ('настройки', 'инфо'):
             kb.add_button('Инфо', color=VkKeyboardColor.PRIMARY, payload=['info'])
             kb.add_button('Очистить мой словарь', color=VkKeyboardColor.NEGATIVE, payload=['clear_diction'])
             kb.add_line()
+            kb.add_button('Изменить напоминание', color=VkKeyboardColor.PRIMARY, payload=['change_timer'])
             kb.add_button('Меню', color=VkKeyboardColor.SECONDARY, payload=['menu', args])
         else:
             kb.add_button('Мой словарь', color=VkKeyboardColor.PRIMARY, payload=['user_dict'])

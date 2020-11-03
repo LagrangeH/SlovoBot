@@ -47,8 +47,8 @@ def run():
                     elif response[0] == '#':  # Отправить "карточку" слова из словаря юзера по номеру в нём
                         try:
                             word = users[user_id].user_diction[int(response[1:]) - 1].capitalize()
-                            word += ' - это\n' + db.data_by_word(word)[2]
-                            bot.send_message(word, kb)
+                            message = word + ' - это\n' + db.data_by_word(word)[2]
+                            bot.send_message(message, keyboard_for_word(word))
                         except IndexError:
                             bot.send_message('Это число превышает количество слов в твоем словаре!', kb)
                         except ValueError:
@@ -187,7 +187,7 @@ def timer():
 
             message = word.upper() + ' - это\n' + word_interpretation
 
-            time.sleep(delta_time)  # Ждём таймер TODO: поставить после дебага здесь
+            # time.sleep(delta_time)  # Ждём таймер TODO: поставить после дебага здесь
 
             for user in clocks[time_for_timer]:
                 vk.method('messages.send',
@@ -197,7 +197,7 @@ def timer():
             else:
                 logger.info('Рассылка отправлена')
 
-            # time.sleep(delta_time)  # Ждём таймер TODO: убрать после дебага
+            time.sleep(delta_time)  # Ждём таймер TODO: убрать после дебага
         except:
             logger.error(traceback.format_exc())
 
