@@ -31,7 +31,7 @@ def run():
                 peer_id, user_id = event.obj.peer_id, event.obj.from_id
                 bot = BotUtils(event, response, user_id, peer_id, users)
                 kb = bot.create_keyboard()
-                inline_kb = bot.create_inline_kb(payload)
+                inline_kb = bot.create_inline_kb(payload) if payload is not None else None
                 # Словарь, где ключ - id юзера, значение - экземпляр класса
                 users[user_id] = SetUniqueVariables() if users.get(user_id) is None else users[user_id]
 
@@ -53,6 +53,23 @@ def run():
                             bot.send_message('Это число превышает количество слов в твоем словаре!', kb)
                         except ValueError:
                             bot.send_message('Нужно ввести число!', kb)
+                    elif response[0] == 't':
+                        if response == 't':
+                            bot.send_message("Напоминания будут приходить тебе в "
+                                             f"{users[user_id].user_timer['timer']}0", kb)
+                        else:
+                            try:
+                                clock = int(response[1:3])
+                            except ValueError:
+                                bot.send_message('Нужно ввести число в формате "tчч". Например, "t16"', kb)
+                            else:
+                                if clock > 23:
+                                    bot.send_message('В сутках 24 часа: нужно ввести число от 0 до 23', kb)
+                                elif clock < 0:
+                                    bot.send_message('Зачем ты вводишь отрицательное число?', kb)
+                                else:
+                                    users[user_id].user_timer['timer'] = float(clock)
+                                    bot.send_message(f"Время установлено на {users[user_id].user_timer['timer']}0", kb)
 
                 elif 'info' in payload:
                     bot.send_message(messages.info, kb)
@@ -73,10 +90,6 @@ def run():
                 elif 'cleared' in payload:
                     users[user_id].clear_diction()
                     bot.send_message('Твой словарь очищен', kb)
-                elif 'change_timer' in payload:
-                    bot.send_message("Сейчас твоё время ежедневных напоминаний установлено на "
-                                     f"{users[user_id].user_timer['timer']}, "
-                                     "нажми на нужную кнопку, чтобы изменить его:", inline_kb)
 
                 else:
                     if "not_supported_button" in payload:
