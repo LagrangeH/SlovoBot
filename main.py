@@ -35,7 +35,7 @@ def run():
                 # Словарь, где ключ - id юзера, значение - экземпляр класса
                 users[user_id] = SetUniqueVariables() if users.get(user_id) is None else users[user_id]
 
-                if not payload:
+                if not payload:    # Если сообщение пользователь ввёл вручную
                     if response[:5] == 'найти':
                         word = response[6:]
                         if db.check_word(word):
@@ -53,7 +53,7 @@ def run():
                             bot.send_message('Это число превышает количество слов в твоем словаре!', kb)
                         except ValueError:
                             bot.send_message('Нужно ввести число!', kb)
-                    elif response[0] == 't':
+                    elif response[0] == 't':    # Изменить или узнать время таймера юзера
                         if response == 't':
                             bot.send_message("Напоминания будут приходить тебе в "
                                              f"{users[user_id].user_timer['timer']}0", kb)
@@ -204,7 +204,7 @@ def timer():
 
             message = word.upper() + ' - это\n' + word_interpretation
 
-            # time.sleep(delta_time)  # Ждём таймер TODO: поставить после дебага здесь
+            time.sleep(delta_time)  # Ждём таймер TODO: поставить после дебага здесь
 
             for user in clocks[time_for_timer]:
                 vk.method('messages.send',
@@ -214,7 +214,7 @@ def timer():
             else:
                 logger.info('Рассылка отправлена')
 
-            time.sleep(delta_time)  # Ждём таймер TODO: убрать после дебага
+            # time.sleep(delta_time)  # Ждём таймер TODO: убрать после дебага
         except:
             logger.error(traceback.format_exc())
 
